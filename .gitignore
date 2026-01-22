@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # Vscode
-.Vscode
+.vscode
 
 # Vector Stores
 vector_store/
