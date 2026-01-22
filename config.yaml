@@ -3,7 +3,7 @@ embedding:
     backend: openvino  # or torch, onnx, openvino
     batch_size: 128
 chunking:
-    type: recursive  # or semantic
+    type: semantic  # or recursive
     # `percentile` only used by semantic chunker
     percentile: 85
     # `chunk_size` and `overlap` only used for recursive
@@ -12,4 +12,4 @@ chunking:
     overlap: 100
 vectordb:
     collection_name: wikipedia.en
-    save_path: "./vector_store-recursive/"
+    save_path: "./vector_store-semantic/"

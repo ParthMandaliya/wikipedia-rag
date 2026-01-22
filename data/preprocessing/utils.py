@@ -13,10 +13,8 @@ def get_chunks(
 ) -> List[Document]:
     chunked_documents: List[Document] = []
 
-    chunked_docs: List[Document] = chunker.create_documents(
-        [doc.page_content for doc in docs],
-        [doc.metadata for doc in docs]
-    )
+    chunked_docs: List[Document] = chunker.split_documents(docs)
+
     for i, chunked_doc in enumerate(chunked_docs):
         chunk_uuid: str = generate_uuid(
             article_id=chunked_doc.metadata["article_id"],
