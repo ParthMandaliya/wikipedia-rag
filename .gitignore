@@ -13,5 +13,4 @@ wheels/
 .vscode
 
 # Vector Stores
-vector_store/
-vector_store-recursive/
+vector_store*/

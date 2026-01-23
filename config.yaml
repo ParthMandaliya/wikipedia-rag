@@ -1,7 +1,7 @@
 embedding:
-    device: cpu  # or cuda
-    backend: openvino  # or torch, onnx, openvino
-    batch_size: 128
+    device: cuda  # or cuda
+    backend: torch  # or torch, onnx, openvino
+    batch_size: 512
 chunking:
     type: semantic  # or recursive
     # `percentile` only used by semantic chunker
@@ -10,6 +10,9 @@ chunking:
     # (RecursiveCharacterTextSplitter) chunking
     chunk_size: 500
     overlap: 100
+    # resume from iteration,
+    # to use this batch size must be the same as when the operation was stoppped
+    skip_batches: 0
 vectordb:
     collection_name: wikipedia.en
     save_path: "./vector_store-semantic/"

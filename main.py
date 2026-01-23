@@ -1,3 +1,4 @@
+import warnings
 from typing import Union, List, Dict, Any
 from pathlib import Path
 from tqdm import tqdm
@@ -21,12 +22,21 @@ def create_vector_db(
     chunker: Union[SemanticChunker, RecursiveCharacterTextSplitter],
     vector_db: WikipediaVectorStore,
     batch_size: int = 128,
+    skip_n_batches: int = 0,
 ) -> None:
     with tqdm(desc="Chunking dataset", total=None) as pbar:
         docs_to_split: List[Document] = []
         batch_count: int = 0
         
         for i, article in enumerate(wiki_ds):
+            if i < (skip_n_batches * batch_size):
+                pbar.set_description(
+                    f"Skipping batch: {i / batch_size:,.0f}..."
+                )
+                if i % batch_size:
+                    pbar.update(batch_size)
+                continue
+
             doc = Document(
                 page_content=article["text"],
                 metadata={
@@ -89,6 +99,13 @@ def main():
     backend: str = config["embedding"]["backend"]
 
     # chunking configs
+    skip_batches: int = config["chunking"]["skip_batches"]
+    if skip_batches is not None:
+        warnings.warn(
+            message="Batch skipping enabled, will skip batches specific...",
+            category=UserWarning
+        )
+
     chunk_type: str = config["chunking"]["type"]
     breakpoint_threshold_amount: int = config["chunking"]["percentile"]
     
@@ -120,7 +137,7 @@ def main():
     )
 
     create_vector_db(
-        wiki_ds, chunker, vector_db, batch_size
+        wiki_ds, chunker, vector_db, batch_size, skip_batches
     )
 
 
