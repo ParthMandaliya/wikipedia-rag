@@ -30,10 +30,9 @@ def create_vector_db(
         
         for i, article in enumerate(wiki_ds):
             if i < (skip_n_batches * batch_size):
-                pbar.set_description(
-                    f"Skipping batch: {i / batch_size:,.0f}..."
-                )
-                if i % batch_size:
+                pbar.set_description(f"Skipping batch: {batch_count:,}...")
+                if (i + 1) % batch_size:
+                    batch_count += 1
                     pbar.update(batch_size)
                 continue
 
