@@ -39,10 +39,6 @@ class WikipediaVectorStore:
                 ids=[doc.metadata["chunk_uuid"] for doc in batch],
                 documents=batch,
             )
-        # self.vector_store.add_documents(
-        #     ids=[doc.metadata["chunk_uuid"] for doc in documents],
-        #     documents=documents,
-        # )
 
     def search(
         self,
