@@ -17,10 +17,8 @@ class Embedder:
         self,
         device: Literal["cpu", "cuda"],
         backend: Literal["torch", "onnx", "openvino"],
-        batch_size: int = 128,
     ) -> None:
         if Embedder._model is None:
-            self.batch_size = batch_size
             Embedder._model = HuggingFaceEmbeddings(
                 model_name="intfloat/e5-small-v2",
                 # multi_process has pickling issue with this embedding
@@ -30,8 +28,7 @@ class Embedder:
                     "backend": backend,
                 },
                 encode_kwargs={
-                    "normalize_embeddings": True, 
-                    "batch_size": batch_size,
+                    "normalize_embeddings": True,
                 },
                 query_encode_kwargs={
                     "normalize_embeddings": True,

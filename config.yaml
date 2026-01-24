@@ -1,7 +1,6 @@
 embedding:
-    device: cuda  # or cuda
-    backend: torch  # or torch, onnx, openvino
-    batch_size: 512
+    device: cpu  # or cuda
+    backend: openvino  # or torch, onnx, openvino
 chunking:
     type: semantic  # or recursive
     # `percentile` only used by semantic chunker
