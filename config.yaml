@@ -2,7 +2,7 @@ embedding:
     device: cpu  # or cuda
     backend: openvino  # or torch, onnx, openvino
 chunking:
-    type: semantic  # or recursive
+    type: recursive  # or semantic
     # `percentile` only used by semantic chunker
     percentile: 85
     # `chunk_size` and `overlap` only used for recursive
@@ -11,7 +11,7 @@ chunking:
     overlap: 100
     # resume from iteration,
     # to use this batch size must be the same as when the operation was stoppped
-    skip_batches: 0
+    skip_articles: 0
 vectordb:
     collection_name: wikipedia.en
-    save_path: "./vector_store-semantic/"
+    save_path: "./vector_store/recursive/"

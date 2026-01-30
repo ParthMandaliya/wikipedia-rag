@@ -14,3 +14,9 @@ wheels/
 
 # Vector Stores
 vector_store*/
+
+# Ignore KG package it's WIP
+knowledge_graph/
+
+# Local vector store
+vector_store/

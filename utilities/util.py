@@ -1,7 +1,7 @@
 import uuid
 import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 def load_config(config_filepath: Path) -> Dict[str, Any]:
@@ -15,8 +15,14 @@ def save_config(config: Dict[str, Any], config_filepath: Path) -> None:
             indent=4, sort_keys=True
         )
 
-def generate_uuid(article_id: str, chunk_index: int, text: str) -> str:
+def generate_article_uuid(title: str, text: str) -> str:
     return str(uuid.uuid5(
-        uuid.NAMESPACE_DNS,
-        f"{article_id}:{chunk_index}:{text}"
+        uuid.NAMESPACE_DNS, f"{title}:{text}"
+    ))
+
+def generate_chunk_uuid(
+    article_id: str, chunk_index: int, text: str,
+) -> str:
+    return str(uuid.uuid5(
+        uuid.NAMESPACE_DNS, f"{article_id}:{chunk_index}:{text}"
     ))

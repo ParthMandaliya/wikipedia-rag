@@ -8,8 +8,9 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 
-from data import get_wiki, get_unique_titles_from_squad
+from data import get_hotpotqa
 from embeddings import Embedder
+from utilities import generate_article_uuid
 from data.preprocessing import (
     SemanticChunkerSingleton, RecursiveChunkerSingleton, get_chunks
 )
@@ -18,37 +19,62 @@ from utilities import load_config
 
 
 def create_vector_db(
-    wiki_ds: IterableDataset,
-    accepted_titles: Set[str],
+    hotpotqad_ds: IterableDataset,
     chunker: Union[SemanticChunker, RecursiveCharacterTextSplitter],
     vector_db: WikipediaVectorStore,
-    # batch_size: Optional[int] = 128,
-    skip_n_batches: Optional[int] = 0,
+    skip_n_articles: Optional[int] = 0,
 ) -> None:
-    with tqdm(desc="Downloading first batch...", total=None) as pbar:
-        article: Optional[Dict[str, str]] = None
-        for i, article in enumerate(wiki_ds):
-            if i < skip_n_batches:
-                pbar.set_description(f"Skipping batch: {i:,}...")
+    with tqdm(desc="Downloading...", total=None) as pbar:
+        articles_processed: Set[str] = set()
+        article_skipped: int = 0
+        for i, article in enumerate(hotpotqad_ds):
+            if article_skipped < skip_n_articles:
+                for row_dict in article["full_articles"]:
+                    articles_processed.add(row_dict["title"])
+
+                article_skipped = len(articles_processed)
+                pbar.set_description(
+                    f"Skipping row: {i:,}; "
+                    f"Articles skipped: {article_skipped:,}"
+                )
                 continue
             
             pbar.set_description(
                 f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | Downloading..."
             )
 
-            doc_to_split = Document(
-                page_content=article["text"],
-                metadata={
-                    "article_id": article.get("id", ""),
-                    "url": article.get("url", ""),
-                    "title": article.get("title", ""),
-                }
-            )
+            docs_to_split: List[Document] = []
+            for full_article in article["full_articles"]:
+                if full_article["title"] in articles_processed:
+                    continue
+                
+                title = full_article["title"]
+                text = full_article["article"]
+                article_id = generate_article_uuid(title=title, text=text)
+                doc = Document(
+                    page_content=text,
+                    metadata={
+                        "article_id": article_id,
+                        "title": title,
+                    }
+                )
+                articles_processed.add(title)
+                docs_to_split.append(doc)
+            
+            if len(docs_to_split) <= 0:
+                continue
 
-            pbar.set_description(
-                f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | Chunking document..."
-            )
-            splitted_docs: List[Document] = get_chunks([doc_to_split], chunker)
+            # using loop to maintain chunk_index and total_chunks 
+            # metadata per article
+            splitted_docs: List[Document] = []
+            for j, doc in enumerate(docs_to_split):
+                pbar.set_description(
+                    f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | "
+                    f"Chunking {j:,}/{len(docs_to_split)} documents..."
+                )
+                splitted_docs.extend(get_chunks(
+                    [doc], chunker=chunker,
+                ))
             
             pbar.set_description(
                 f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | "
@@ -62,18 +88,16 @@ def create_vector_db(
             )
             del splitted_docs
 
-            pbar.update(1)
-
-            if i >= len(accepted_titles):
-                break
+            pbar.update(len(docs_to_split))
         
         pbar.set_description(
-            f"Complete! Articles Processed: {i+1:,} | "
+            f"Complete! Unique Articles Processed: {len(articles_processed):,} | "
             f"Total Chunks Stored in ChromaDB: {vector_db.total_chunks:,}"
         )
 
     print(f"Final vector store saved at: {vector_db.db_save_path}")
-    print(f"Total articles processed: {i+1:,}")
+    print(f"Total unique articles processed: {len(articles_processed):,}")
+    print(f"Total rows processed: {i+1:,}")
     print(f"Total chunks indexed: {vector_db.total_chunks:,}")
 
 
@@ -85,35 +109,32 @@ def main():
     backend: str = config["embedding"]["backend"]
 
     # chunking configs
-    skip_batches: int = config["chunking"]["skip_batches"]
-    if skip_batches > 0:
+    skip_articles: int = config["chunking"]["skip_articles"]
+    if skip_articles > 0:
         warnings.warn(message="Batch skipping enabled...", category=UserWarning)
 
     chunk_type: str = config["chunking"]["type"]
     breakpoint_threshold_amount: int = config["chunking"]["percentile"]
     
-    if chunk_type != "semantic":
-        # only used for RecursiveCharacterTextSplitter
-        chunk_size: int = config["chunking"]["chunk_size"]
-        overlap: int = config["chunking"]["overlap"]
-
     # vector db configs
     vector_db_collection_name: str = config["vectordb"]["collection_name"]
     vector_db_save_path: Path = Path(config["vectordb"]["save_path"])
 
-    unique_titles = get_unique_titles_from_squad(split="all")
-    wiki_ds: IterableDataset = get_wiki(
-        accepted_titles=unique_titles
+    hotpotqa_ds: IterableDataset = get_hotpotqa(
+        name="fullwiki", split="train",
     )
-    embedding_model = Embedder(
-        device=device, backend=backend
-    )
+    embedding_model = Embedder(device=device, backend=backend)
+
     if chunk_type == "semantic":
         chunker: SemanticChunker = SemanticChunkerSingleton(
             embedding_model,
             breakpoint_threshold_amount=breakpoint_threshold_amount,
         )
     else:
+        # only used for RecursiveCharacterTextSplitter
+        chunk_size: int = config["chunking"]["chunk_size"]
+        overlap: int = config["chunking"]["overlap"]
+        
         chunker: RecursiveCharacterTextSplitter = RecursiveChunkerSingleton(
             chunk_size=chunk_size, chunk_overlap=overlap,
         )
@@ -125,9 +146,9 @@ def main():
     )
 
     create_vector_db(
-        wiki_ds, unique_titles, chunker, vector_db, skip_batches,
+        hotpotqa_ds, chunker, vector_db, skip_articles,
     )
-
+ 
 
 if __name__ == "__main__":
     main()

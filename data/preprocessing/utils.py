@@ -4,7 +4,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 
-from utilities import generate_uuid
+from utilities import generate_chunk_uuid
 
 
 def get_chunks(
@@ -16,10 +16,10 @@ def get_chunks(
     chunked_docs: List[Document] = chunker.split_documents(docs)
 
     for i, chunked_doc in enumerate(chunked_docs):
-        chunk_uuid: str = generate_uuid(
+        chunk_uuid: str = generate_chunk_uuid(
             article_id=chunked_doc.metadata["article_id"],
             chunk_index=i,
-            text=chunked_doc.page_content
+            text=chunked_doc.page_content,
         )
         chunked_doc.metadata.update({
             "chunk_uuid": chunk_uuid,
