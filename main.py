@@ -96,10 +96,7 @@ def create_vector_db(
         
         pbar.set_description(
             f"Complete! Unique Articles Processed: {len(articles_processed):,} | "
-<<<<<<< HEAD
-=======
             f"Total Unique Articles Skipped: {article_skipped:,} | "
->>>>>>> bc6e40b (Fixed skip articles logic)
             f"Total Rows processed: {i:,} | "
             f"Total Chunks Stored in ChromaDB: {vector_db.total_chunks:,}"
         )
