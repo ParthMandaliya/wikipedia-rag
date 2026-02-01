@@ -1,7 +1,7 @@
 import uuid
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 def load_config(config_filepath: Path) -> Dict[str, Any]:
