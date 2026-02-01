@@ -40,7 +40,8 @@ def create_vector_db(
                 continue
             
             pbar.set_description(
-                f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | Downloading..."
+                f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
+                f"Chunks: {vector_db.total_chunks:,} | Downloading..."
             )
 
             docs_to_split: List[Document] = []
@@ -69,7 +70,8 @@ def create_vector_db(
             splitted_docs: List[Document] = []
             for j, doc in enumerate(docs_to_split):
                 pbar.set_description(
-                    f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | "
+                    f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
+                    f"Chunks: {vector_db.total_chunks:,} | "
                     f"Chunking {j:,}/{len(docs_to_split)} documents..."
                 )
                 splitted_docs.extend(get_chunks(
@@ -77,13 +79,15 @@ def create_vector_db(
                 ))
             
             pbar.set_description(
-                f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | "
+                f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
+                f"Chunks: {vector_db.total_chunks:,} | "
                 f"Adding {len(splitted_docs):,} chunks to ChromaDB..."
             )
             vector_db.add_documents(splitted_docs)
 
             pbar.set_description(
-                f"Articles: {i:,} | Chunks: {vector_db.total_chunks:,} | "
+                f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
+                f"Chunks: {vector_db.total_chunks:,} | "
                 f"Added {len(splitted_docs):,} chunks to ChromaDB..."
             )
             del splitted_docs
@@ -92,6 +96,7 @@ def create_vector_db(
         
         pbar.set_description(
             f"Complete! Unique Articles Processed: {len(articles_processed):,} | "
+            f"Total Rows processed: {i:,} | "
             f"Total Chunks Stored in ChromaDB: {vector_db.total_chunks:,}"
         )
 
