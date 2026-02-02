@@ -20,9 +20,11 @@ from utilities import load_config
 
 def create_vector_db(
     hotpotqad_ds: IterableDataset,
+    chunking_type: str,
     chunker: Union[SemanticChunker, RecursiveCharacterTextSplitter],
     vector_db: WikipediaVectorStore,
-    skip_n_articles: Optional[int] = 0,
+    skip_n_articles: int = 0,
+    process_n_articles: Optional[int] = None,
 ) -> None:
     with tqdm(desc="Downloading...", total=None) as pbar:
         articles_processed: Set[str] = set()
@@ -34,12 +36,14 @@ def create_vector_db(
 
                 article_skipped = len(articles_processed)
                 pbar.set_description(
+                    f"{chunking_type.title()} | "
                     f"Skipping row: {i:,}; "
                     f"Articles skipped: {article_skipped:,}"
                 )
                 continue
             
             pbar.set_description(
+                f"{chunking_type.title()} | "
                 f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
                 f"Chunks: {vector_db.total_chunks:,} | Downloading..."
             )
@@ -70,6 +74,7 @@ def create_vector_db(
             splitted_docs: List[Document] = []
             for j, doc in enumerate(docs_to_split):
                 pbar.set_description(
+                    f"{chunking_type.title()} | "
                     f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
                     f"Chunks: {vector_db.total_chunks:,} | "
                     f"Chunking {j:,}/{len(docs_to_split)} documents..."
@@ -79,6 +84,7 @@ def create_vector_db(
                 ))
             
             pbar.set_description(
+                f"{chunking_type.title()} | "
                 f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
                 f"Chunks: {vector_db.total_chunks:,} | "
                 f"Adding {len(splitted_docs):,} chunks to ChromaDB..."
@@ -86,6 +92,7 @@ def create_vector_db(
             vector_db.add_documents(splitted_docs)
 
             pbar.set_description(
+                f"{chunking_type.title()} | "
                 f"Rows: {i:,} | Articles: {len(articles_processed):,} | "
                 f"Chunks: {vector_db.total_chunks:,} | "
                 f"Added {len(splitted_docs):,} chunks to ChromaDB..."
@@ -93,14 +100,22 @@ def create_vector_db(
             del splitted_docs
 
             pbar.update(len(docs_to_split))
+
+            if (
+                (process_n_articles is not None) and 
+                len(articles_processed) >= process_n_articles
+            ):
+                break
         
         pbar.set_description(
+            f"{chunking_type.title()} | "
             f"Complete! Unique Articles Processed: {len(articles_processed):,} | "
             f"Total Unique Articles Skipped: {article_skipped:,} | "
-            f"Total Rows processed: {i:,} | "
+            f"Total Rows processed: {i+1:,} | "
             f"Total Chunks Stored in ChromaDB: {vector_db.total_chunks:,}"
         )
 
+    print(f"{chunking_type.title()}")
     print(f"Final vector store saved at: {vector_db.db_save_path}")
     print(f"Total unique articles skipped: {article_skipped:,}")
     print(f"Total unique articles processed: {len(articles_processed):,}")
@@ -116,9 +131,19 @@ def main():
     backend: str = config["embedding"]["backend"]
 
     # chunking configs
-    skip_articles: int = config["chunking"]["skip_articles"]
-    if skip_articles > 0:
-        warnings.warn(message="Batch skipping enabled...", category=UserWarning)
+    skip_n_articles: int = config["chunking"]["skip_articles"]
+    if skip_n_articles > 0:
+        warnings.warn(
+            f"First {skip_n_articles:,} articles will be skipped...",
+            category=UserWarning
+        )
+
+    process_n_articles: Optional[int] = config["chunking"]["process_articles"]
+    if process_n_articles is not None:
+        warnings.warn(
+            f"Only first {process_n_articles} will be processed...",
+            category=UserWarning
+        )
 
     chunk_type: str = config["chunking"]["type"]
     breakpoint_threshold_amount: int = config["chunking"]["percentile"]
@@ -153,7 +178,12 @@ def main():
     )
 
     create_vector_db(
-        hotpotqa_ds, chunker, vector_db, skip_articles,
+        hotpotqad_ds=hotpotqa_ds,
+        chunking_type=chunk_type,
+        chunker=chunker,
+        vector_db=vector_db,
+        skip_n_articles=skip_n_articles,
+        process_n_articles=process_n_articles,
     )
  
 
