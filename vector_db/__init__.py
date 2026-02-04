@@ -1,3 +1,3 @@
-from .create_vector_database import WikipediaVectorStore
+from .vector_store import WikipediaVectorStore
 
 __all__ = ["WikipediaVectorStore"]
