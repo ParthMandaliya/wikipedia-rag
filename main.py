@@ -31,8 +31,13 @@ def create_vector_db(
         article_skipped: int = 0
         for i, article in enumerate(hotpotqad_ds):
             if article_skipped < skip_n_articles:
+                cont = True
                 for row_dict in article["full_articles"]:
                     articles_processed.add(row_dict["title"])
+
+                    if len(articles_processed) >= skip_n_articles:
+                        cont = False
+                        break
 
                 article_skipped = len(articles_processed)
                 pbar.set_description(
@@ -40,7 +45,8 @@ def create_vector_db(
                     f"Skipping row: {i:,}; "
                     f"Articles skipped: {article_skipped:,}"
                 )
-                continue
+                if cont:
+                    continue
             
             pbar.set_description(
                 f"{chunking_type.title()} | "
